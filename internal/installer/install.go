@@ -22,6 +22,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -121,6 +122,9 @@ func (id installData) install(tmpFile string, lookupFunc func() (string, error))
 		lookupFunc = func() (string, error) {
 			return exec.LookPath("contrast-go")
 		}
+	}
+	if err := os.MkdirAll(filepath.Dir(id.dst), 0755); err != nil {
+		return fmt.Errorf("installation directory issue: %w", err)
 	}
 	if err := os.Rename(tmpFile, id.dst); err != nil {
 		return err

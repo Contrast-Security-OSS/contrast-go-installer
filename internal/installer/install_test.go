@@ -187,6 +187,10 @@ func Test_install(t *testing.T) {
 		"basic": {
 			tmpPresent: true,
 		},
+		"missing dir": {
+			tmpPresent: true,
+			dst:        filepath.Join(t.TempDir(), "dir", "contrast-go"),
+		},
 		"missing": {
 			tmpPresent:     false,
 			expectErr:      "no such file",
