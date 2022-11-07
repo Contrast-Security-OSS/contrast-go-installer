@@ -10,10 +10,18 @@ stderr ^'Downloaded ''latest'''
 stderr 'to '$WORK/gopath/bin/contrast-go
 exists $WORK/gopath/bin/contrast-go
 
+env GOPATH=$WORK/gopath2
+env PATH=$GOPATH/bin:$PATH
+# don't initialize $GOPATH/bin. The installer should create it.
+contrast-go-installer -u $baseURL latest
+stderr ^'Downloaded ''latest'''
+stderr 'to '$GOPATH/bin/contrast-go
+exists $GOPATH/bin/contrast-go
+
 env GOBIN=
 env GOPATH=
 ! contrast-go-installer -u $baseURL latest
-stderr 'no such file or directory'
+stderr 'installation directory issue'
 
 env GOBIN=
 env GOPATH=$WORK/gopath
