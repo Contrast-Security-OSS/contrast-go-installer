@@ -15,6 +15,8 @@
 package installer
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -56,6 +58,7 @@ func Install(baseURL, version, os, arch, path string) error {
 	if err != nil {
 		return err
 	}
+
 	return id.install(tmp, nil)
 }
 
@@ -77,13 +80,10 @@ func (id *installData) download() (string, error) {
 		return "", fmt.Errorf("unable to create tmp for download: %w", err)
 	}
 	defer tmp.Close()
-
-	res, err := makeRequest(url)
+	res, err := makeRequest(http.MethodHead, url)
 	if err != nil {
 		return "", err
 	}
-	defer res.Body.Close()
-
 	if res.StatusCode == http.StatusNotFound {
 		return "", id.dlNotFoundError(res)
 	}
@@ -93,12 +93,25 @@ func (id *installData) download() (string, error) {
 			url, res.Status,
 		)
 	}
+	wantHash := res.Header.Get("X-Checksum-Sha256")
 
-	if n, err := io.Copy(tmp, res.Body); err != nil {
+	res, err = makeRequest(http.MethodGet, url)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+
+	hash := sha256.New()
+	if n, err := io.Copy(io.MultiWriter(tmp, hash), res.Body); err != nil {
 		return "", fmt.Errorf(
 			"couldn't download file (%d bytes read of %d expected): %w",
 			n, res.ContentLength, err,
 		)
+	}
+
+	gotHash := hex.EncodeToString(hash.Sum(nil))
+	if wantHash != gotHash {
+		return "", fmt.Errorf("checksum mismatch, expected %q instead of %q", wantHash, gotHash)
 	}
 
 	fi, err := os.Stat(tmp.Name())
@@ -154,9 +167,9 @@ Make sure that the $PATH environment variable includes %s`,
 	return nil
 }
 
-func makeRequest(url string) (*http.Response, error) {
+func makeRequest(method, url string) (*http.Response, error) {
 	client := http.DefaultClient
-	req, err := http.NewRequest("GET", url, nil)
+	req, err := http.NewRequest(method, url, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -174,14 +187,14 @@ func makeRequest(url string) (*http.Response, error) {
 func (id installData) dlNotFoundError(res *http.Response) error {
 	// first, check the version
 	url := fmt.Sprintf("%s/%s", id.baseURL, id.version)
-	res2, err := makeRequest(url)
+	res2, err := makeRequest(http.MethodGet, url)
 	if err != nil {
 		return fmt.Errorf(badver, id.version)
 	}
 	defer res2.Body.Close()
 	if res2.StatusCode != http.StatusOK {
 		// invalid version; tell user what versions are valid
-		res2, err = makeRequest(id.baseURL)
+		res2, err = makeRequest(http.MethodGet, id.baseURL)
 		if err != nil {
 			return fmt.Errorf(badver, id.version)
 		}

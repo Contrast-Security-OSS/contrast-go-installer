@@ -33,7 +33,7 @@ func Test_userAgent(t *testing.T) {
 			_, _ = w.Write([]byte("some data"))
 		}))
 		t.Cleanup(s.Close)
-		response, err := makeRequest(s.URL)
+		response, err := makeRequest(http.MethodGet, s.URL)
 
 		if err != nil {
 			t.Fatalf("unexpected err: %v", err)
