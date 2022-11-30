@@ -15,8 +15,12 @@
 package installer
 
 import (
+	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -46,8 +50,19 @@ func Test_userAgent(t *testing.T) {
 }
 
 func Test_download(t *testing.T) {
+	checksumHandler := func(b []byte) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			h := sha256.New()
+			if _, err := io.Copy(h, bytes.NewBuffer(b)); err != nil {
+				t.Fatalf("unable to calculate checksum: %s", err)
+			}
+			hash := hex.EncodeToString(h.Sum(nil))
+			w.Header().Set("X-Checksum-Sha256", hash)
+		})
+	}
 	var tests = map[string]struct {
-		handler http.Handler
+		handler     http.Handler
+		headHandler http.Handler
 
 		// if non-nil, is called to configure the server
 		server func(*httptest.Server) *httptest.Server
@@ -59,15 +74,22 @@ func Test_download(t *testing.T) {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				_, _ = w.Write([]byte("some data"))
 			}),
+			headHandler: checksumHandler([]byte("some data")),
 		},
 		"404": {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(404)
+			}),
+			headHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(404)
 			}),
 			expectErr: `Version "v" does not exist. For a full list of versions, see`,
 		},
 		"500": {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				w.WriteHeader(500)
+			}),
+			headHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(500)
 			}),
 			expectErr: "server did not return 200",
@@ -78,7 +100,8 @@ func Test_download(t *testing.T) {
 				w.WriteHeader(200)
 				_, _ = w.Write([]byte("not 1000 bytes"))
 			}),
-			expectErr: "couldn't download file",
+			headHandler: checksumHandler([]byte("not 1000 bytes")),
+			expectErr:   "couldn't download file",
 		},
 		"bad connection": {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -88,7 +111,8 @@ func Test_download(t *testing.T) {
 				s.Close()
 				return s
 			},
-			expectErr: "there is a network communication issue",
+			headHandler: checksumHandler([]byte("some data")),
+			expectErr:   "there is a network communication issue",
 		},
 		"untrusted cert": {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +121,8 @@ func Test_download(t *testing.T) {
 			server: func(s *httptest.Server) *httptest.Server {
 				return httptest.NewTLSServer(s.Config.Handler)
 			},
-			expectErr: "certificate",
+			headHandler: checksumHandler([]byte("some data")),
+			expectErr:   "certificate",
 		},
 		"follows redirect": {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -107,6 +132,7 @@ func Test_download(t *testing.T) {
 				}
 				_, _ = w.Write([]byte("some data"))
 			}),
+			headHandler: checksumHandler([]byte("some data")),
 		},
 		"follows redirect to error": {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -114,6 +140,9 @@ func Test_download(t *testing.T) {
 					http.Redirect(w, r, "/redirect", http.StatusMovedPermanently)
 					return
 				}
+				w.WriteHeader(404)
+			}),
+			headHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(404)
 			}),
 			expectErr: `Version "v" does not exist. For a full list of versions, see`,
@@ -126,6 +155,7 @@ func Test_download(t *testing.T) {
 				}
 				w.WriteHeader(404)
 			}),
+			headHandler: checksumHandler([]byte("ok")),
 		},
 		"lists available versions when given version is not available": {
 			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -135,13 +165,37 @@ func Test_download(t *testing.T) {
 				}
 				_, _ = w.Write([]byte(`<html><body><a href="0.1.2/">0.1.2</a><a href="1.2.3/">1.2.3</a><a href="latest/">latest</a></body></html>`))
 			}),
+			headHandler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if strings.Contains(r.RequestURI, "/v") {
+					w.WriteHeader(404)
+					return
+				}
+				checksumHandler([]byte(`<html><body><a href="0.1.2/">0.1.2</a><a href="1.2.3/">1.2.3</a><a href="latest/">latest</a></body></html>`)).ServeHTTP(w, r)
+			}),
 			expectErr: "\"v\" does not exist. Available versions include\n\tlatest, 1.2.3, 0.1.2",
 		},
+		"invalid checksum": {
+			handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = w.Write([]byte("some data"))
+			}),
+			headHandler: checksumHandler([]byte("different data")),
+			expectErr:   "checksum mismatch, expected",
+		},
+	}
+
+	handler := func(handler, headHandler http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodHead && headHandler != nil {
+				headHandler.ServeHTTP(w, r)
+				return
+			}
+			handler.ServeHTTP(w, r)
+		})
 	}
 
 	for name, test := range tests {
 		t.Run(name, func(t *testing.T) {
-			s := httptest.NewServer(test.handler)
+			s := httptest.NewServer(handler(test.handler, test.headHandler))
 			if test.server != nil {
 				s = test.server(s)
 			}
