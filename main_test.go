@@ -16,7 +16,10 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -132,7 +135,7 @@ func allowed(list []string, val string) bool {
 // startServer starts a test server to handle downloads and puts the server's
 // address in the $baseURL environment variable.
 func startServer(ts *testscript.TestScript, neg bool, args []string) {
-	s := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	srvHandler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if neg {
 			w.WriteHeader(404)
 			return
@@ -175,7 +178,22 @@ func startServer(ts *testscript.TestScript, neg bool, args []string) {
 		default:
 			ts.Fatalf("unexpected request for %s\n", r.RequestURI)
 		}
-	}))
+	})
+	headHandler := func(h http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodHead {
+				h := sha256.New()
+				_, err := io.Copy(h, bytes.NewBufferString(r.RequestURI))
+				if err != nil {
+					ts.Fatalf("unable to calculate checksum: %s", err)
+				}
+				hash := hex.EncodeToString(h.Sum(nil))
+				w.Header().Set("X-Checksum-sha256", hash)
+			}
+			h.ServeHTTP(w, r)
+		})
+	}
+	s := httptest.NewServer(headHandler(srvHandler))
 	ts.Defer(s.Close)
 	ts.Logf("test server listening at: %s", s.URL)
 
