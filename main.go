@@ -1,4 +1,4 @@
-// Copyright 2022 Contrast Security, Inc.
+// Copyright 2023 Contrast Security, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -115,8 +115,6 @@ func main1() int {
 	}
 	path = filepath.Join(path, "contrast-go")
 
-	fixDarwinArch(env)
-
 	if err := installer.Install(*source, version, env.GOOS, env.GOARCH, path); err != nil {
 		log.Println(err)
 		return 2
@@ -154,16 +152,4 @@ func targetDir(gobin, path string) (string, error) {
 	}
 
 	return filepath.Join(list[0], "bin"), nil
-}
-
-func fixDarwinArch(env *goenv) {
-	if !(env.GOOS == "darwin" && env.GOARCH == "arm64") {
-		return
-	}
-
-	env.GOARCH = "amd64"
-	log.Println(
-		"darwin/arm64 is not currently a release target.",
-		"Setting release to darwin/amd64 to run in compatibility mode.",
-	)
 }

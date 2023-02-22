@@ -1,4 +1,4 @@
-// Copyright 2022 Contrast Security, Inc.
+// Copyright 2023 Contrast Security, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -113,6 +113,16 @@ const (
 <pre>Name              Last modified      Size</pre><hr/>
 <pre><a href="../">../</a>
 <a href="darwin-amd64/">darwin-amd64/</a>      07-Jul-2022 15:47    -
+<a href="darwin-arm64/">darwin-arm64/</a>      07-Jul-2022 15:47    -
+<a href="linux-amd64/">linux-amd64/</a>       07-Jul-2022 15:47    -
+<a href="dependencies.csv">dependencies.csv</a>   07-Jul-2022 15:47  1.25 KB
+</pre><hr/><address style="font-size:small;">Online Server</address></body></html>`
+
+	archdirNoArm = `<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<html><body><h1>Index of go-agent-release/1.2.3</h1>
+<pre>Name              Last modified      Size</pre><hr/>
+<pre><a href="../">../</a>
+<a href="darwin-amd64/">darwin-amd64/</a>      07-Jul-2022 15:47    -
 <a href="linux-amd64/">linux-amd64/</a>       07-Jul-2022 15:47    -
 <a href="dependencies.csv">dependencies.csv</a>   07-Jul-2022 15:47  1.25 KB
 </pre><hr/><address style="font-size:small;">Online Server</address></body></html>`
@@ -120,7 +130,7 @@ const (
 
 var (
 	allowedOses   = []string{"linux", "darwin"}
-	allowedArches = []string{"amd64"}
+	allowedArches = []string{"amd64", "arm64"}
 )
 
 func allowed(list []string, val string) bool {
@@ -151,6 +161,8 @@ func startServer(ts *testscript.TestScript, neg bool, args []string) {
 				return
 			case "3.0.0":
 				_, _ = w.Write([]byte(archdir))
+			case "1.2.3":
+				_, _ = w.Write([]byte(archdirNoArm))
 			default:
 				w.WriteHeader(404)
 			}
@@ -162,7 +174,13 @@ func startServer(ts *testscript.TestScript, neg bool, args []string) {
 				w.WriteHeader(404)
 				return
 			}
-			if !allowed(allowedArches, osArch[1]) {
+			arches := allowedArches
+			if paths[0] != "latest" && paths[0] != "3.0.0" {
+				// only later revisions have native arm64 binaries
+				arches = []string{"amd64"}
+			}
+
+			if !allowed(arches, osArch[1]) {
 				w.WriteHeader(404)
 				return
 			}

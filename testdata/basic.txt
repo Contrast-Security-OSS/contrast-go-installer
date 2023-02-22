@@ -10,9 +10,14 @@ env GOARCH=amd64
 contrast-go-installer -u $baseURL 1.2.3
 grep '/1.2.3/linux-amd64/contrast-go' $GOBIN/contrast-go
 
-# expect that darwin/arm64 gets corrected to darwin/amd64
+# expect that darwin/arm64 is not changed to darwin/amd64 when arm64 release exists
 env GOOS=darwin
 env GOARCH=arm64
 contrast-go-installer -u $baseURL latest
-stderr ^'darwin/arm64 is not currently a release target'
-grep '/latest/darwin-amd64/contrast-go' $GOBIN/contrast-go
+grep '/latest/darwin-arm64/contrast-go' $GOBIN/contrast-go
+
+# expect that darwin/arm64 is changed to darwin/amd64 when arm64 release does not exist
+env GOOS=darwin
+env GOARCH=arm64
+contrast-go-installer -u $baseURL 1.2.3
+grep '/1.2.3/darwin-amd64/contrast-go' $GOBIN/contrast-go

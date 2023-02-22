@@ -13,12 +13,12 @@ env GOOS=linux
 env GOARCH=and64
 ! contrast-go-installer -u $baseURL latest
 stderr 'contrast-go is not available for platform "linux-and64".'
-stderr 'darwin-amd64, linux-amd64'
+stderr 'darwin-amd64, darwin-arm64, linux-amd64'
 ! exists $GOBIN/contrast-go
 
 env GOOS=darfin
 env GOARCH=amd64
 ! contrast-go-installer -u $baseURL latest
 stderr 'contrast-go is not available for platform "darfin-amd64".'
-stderr 'darwin-amd64, linux-amd64'
+stderr 'darwin-amd64, darwin-arm64, linux-amd64'
 ! exists $GOBIN/contrast-go

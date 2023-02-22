@@ -1,4 +1,4 @@
-// Copyright 2022 Contrast Security, Inc.
+// Copyright 2023 Contrast Security, Inc.
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,6 +55,14 @@ func Install(baseURL, version, os, arch, path string) error {
 		dst:     path,
 	}
 	tmp, err := id.download()
+	if err != nil && id.os == "darwin" && id.arch == "arm64" {
+		// No darwin/arm64 binary? Try darwin/amd64. We don't do the same for
+		// linux/arm64 since linux doesn't automagically translate binaries.
+		if _, ok := err.(*errBadPlat); ok {
+			id.arch = "amd64"
+			tmp, err = id.download()
+		}
+	}
 	if err != nil {
 		return err
 	}
