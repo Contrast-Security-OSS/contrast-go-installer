@@ -97,20 +97,20 @@ func (a versions) String() string {
 	return strings.Join(s, ", ")
 }
 
-type errBadVersion struct {
-	availableVersions versions
-	badVersion        string
+type ErrBadVersion struct {
+	AvailableVersions versions
+	BadVersion        string
 }
 
 const maxVersionsListed = 5
 
-func (err *errBadVersion) Error() string {
-	sort.Sort(err.availableVersions)
-	if len(err.availableVersions) > maxVersionsListed {
-		err.availableVersions = err.availableVersions[:maxVersionsListed]
+func (err *ErrBadVersion) Error() string {
+	sort.Sort(err.AvailableVersions)
+	if len(err.AvailableVersions) > maxVersionsListed {
+		err.AvailableVersions = err.AvailableVersions[:maxVersionsListed]
 	}
 	return fmt.Sprintf("Version %q does not exist. Available versions include\n\t%s\n%s",
-		err.badVersion, err.availableVersions.String(), agentArchivePg)
+		err.BadVersion, err.AvailableVersions.String(), agentArchivePg)
 }
 
 // reads html from body, returning extracted versions

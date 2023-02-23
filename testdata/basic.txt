@@ -20,4 +20,5 @@ grep '/latest/darwin-arm64/contrast-go' $GOBIN/contrast-go
 env GOOS=darwin
 env GOARCH=arm64
 contrast-go-installer -u $baseURL 1.2.3
+stderr ^'darwin/arm64 is not a release target for this'
 grep '/1.2.3/darwin-amd64/contrast-go' $GOBIN/contrast-go

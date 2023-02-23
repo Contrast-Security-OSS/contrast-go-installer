@@ -55,14 +55,6 @@ func Install(baseURL, version, os, arch, path string) error {
 		dst:     path,
 	}
 	tmp, err := id.download()
-	if err != nil && id.os == "darwin" && id.arch == "arm64" {
-		// No darwin/arm64 binary? Try darwin/amd64. We don't do the same for
-		// linux/arm64 since linux doesn't automagically translate binaries.
-		if _, ok := err.(*errBadPlat); ok {
-			id.arch = "amd64"
-			tmp, err = id.download()
-		}
-	}
 	if err != nil {
 		return err
 	}
@@ -215,9 +207,9 @@ func (id installData) dlNotFoundError(res *http.Response) error {
 			return fmt.Errorf(badver, id.version)
 		}
 
-		return &errBadVersion{
-			availableVersions: avail,
-			badVersion:        id.version,
+		return &ErrBadVersion{
+			AvailableVersions: avail,
+			BadVersion:        id.version,
 		}
 	}
 
@@ -226,10 +218,10 @@ func (id installData) dlNotFoundError(res *http.Response) error {
 		return fmt.Errorf(unknownError)
 	}
 	// os and/or arch is invalid
-	return &errBadPlat{
-		available: avail,
-		arch:      id.arch,
-		os:        id.os,
+	return &ErrBadPlatform{
+		Available: avail,
+		Arch:      id.arch,
+		OS:        id.os,
 	}
 }
 
@@ -250,12 +242,12 @@ func listPlatforms(body io.Reader) ([]string, error) {
 	return plats, nil
 }
 
-type errBadPlat struct {
-	available []string
-	arch, os  string
+type ErrBadPlatform struct {
+	Available []string
+	Arch, OS  string
 }
 
-func (err *errBadPlat) Error() string {
+func (err *ErrBadPlatform) Error() string {
 	return fmt.Sprintf("contrast-go is not available for platform \"%s-%s\". Available platforms:\n\t%s\n%s",
-		err.os, err.arch, strings.Join(err.available, ", "), sysRequirementsPg)
+		err.OS, err.Arch, strings.Join(err.Available, ", "), sysRequirementsPg)
 }

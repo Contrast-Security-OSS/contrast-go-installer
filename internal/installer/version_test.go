@@ -99,9 +99,9 @@ func TestErrBadVersion_Error(t *testing.T) {
 		avail = append(avail, toVersion(v))
 	}
 
-	err := &errBadVersion{
-		availableVersions: avail,
-		badVersion:        "badVer",
+	err := &ErrBadVersion{
+		AvailableVersions: avail,
+		BadVersion:        "badVer",
 	}
 	got := err.Error()
 	if !strings.Contains(got, want) {

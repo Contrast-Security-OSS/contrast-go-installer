@@ -115,7 +115,22 @@ func main1() int {
 	}
 	path = filepath.Join(path, "contrast-go")
 
-	if err := installer.Install(*source, version, env.GOOS, env.GOARCH, path); err != nil {
+	err = installer.Install(*source, version, env.GOOS, env.GOARCH, path)
+	if err != nil && env.GOOS == "darwin" && env.GOARCH == "arm64" {
+		// No darwin/arm64 binary? Try darwin/amd64. We don't do the same for
+		// linux/arm64 since linux doesn't automagically translate binaries.
+		bp := &installer.ErrBadPlatform{}
+		if errors.As(err, &bp) {
+			log.Println(
+				"darwin/arm64 is not a release target for this contrast-go version.",
+				"Setting release to darwin/amd64 to run in compatibility mode.",
+			)
+			env.GOARCH = "amd64"
+			err = installer.Install(*source, version, env.GOOS, env.GOARCH, path)
+		}
+	}
+
+	if err != nil {
 		log.Println(err)
 		return 2
 	}
