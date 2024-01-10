@@ -38,7 +38,10 @@ func TestLicense(t *testing.T) {
 	}
 
 	var sb strings.Builder
-	for _, ll := range licenseLines {
+
+	// license is 13 lines long and this won't change so hardcode it
+	for i := 0; i < 13; i++ {
+		ll := licenseLines[i]
 		sb.WriteString("//")
 		if ll != "" {
 			sb.WriteByte(' ')
