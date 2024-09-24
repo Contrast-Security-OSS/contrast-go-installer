@@ -23,14 +23,5 @@ env GOPATH=
 ! contrast-go-installer -u $baseURL latest
 stderr 'installation directory issue'
 
-env GOBIN=
-env GOPATH=$WORK/gopath
-# this will make GOPATH invalid and cause 'go env GOPATH' to fail
-cp go.mod gopath/go.mod
-! contrast-go-installer -u $baseURL latest
-stderr 'There was a problem reading the Go environment'
-stderr 'unable to run ''go env'''
-stderr 'go.mod exists but should not'
-
 -- go.mod --
 module test.com/test

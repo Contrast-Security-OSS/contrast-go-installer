@@ -36,7 +36,7 @@ in
 pkgs.mkShell {
   buildInputs = with pkgs; [
     git
-    go_1_18
+    go
     gnumake
 
     # This is used for our pre-commit/pre-push hooks, which is meant to run on
