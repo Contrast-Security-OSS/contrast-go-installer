@@ -4,7 +4,7 @@ go 1.17
 
 require (
 	github.com/rogpeppe/go-internal v1.12.0
-	golang.org/x/net v0.32.0
+	golang.org/x/net v0.33.0
 )
 
 require (
