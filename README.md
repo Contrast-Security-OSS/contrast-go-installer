@@ -13,10 +13,10 @@ https://pkg.contrastsecurity.com/go-agent-release/.
 
 ## System Requirements
 
-* go1.17 or later, which can be downloaded from https://go.dev/dl/.
+* go1.25 or later, which can be downloaded from https://go.dev/dl/.
 
 > **Note**
-> While `contrast-go-installer` works with version 1.17 and on, `contrast-go`
+> While `contrast-go-installer` works with version 1.25 and on, `contrast-go`
 requires one of the two latest Go major versions. For a full list of
 contrast-go's system requirements, see [OS and architecture
 requirements](https://docs.contrastsecurity.com/en/go-system-requirements.html).
